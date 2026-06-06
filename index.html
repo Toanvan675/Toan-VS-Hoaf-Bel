@@ -70,6 +70,11 @@ const bgMusic = new Audio('audio/bgm.mp3');
 bgMusic.loop = true; // Lặp lại nhạc khi hết
 bgMusic.volume = 0.5; // Điều chỉnh âm lượng (0.0 đến 1.0)
 
+// --- THÊM NHẠC KẾT THÚC GAME ---
+const gameOverMusic = new Audio('audio/gameover.mp3');
+gameOverMusic.loop = false; // Chỉ phát 1 lần khi thua
+gameOverMusic.volume = 0.6; // Điều chỉnh âm lượng nhạc kết thúc
+
 let gameState = 'MENU', gameSpeed = 1, globalFrame = 0, sun = 250, score = 0;
 const gridW = 100, gridH = 100, rows = 5, cols = 9, uiH = 100;
 let plants = [], zombies = [], projectiles = [], suns = [], frameCount = 0, selectedPlant = null;
@@ -143,6 +148,10 @@ class Zombie {
             document.getElementById('gameOverOverlay').style.display = 'flex';
             document.getElementById('inGameBar').style.display = 'none';
             bgMusic.pause(); // Dừng nhạc khi thua game
+            
+            // Phát nhạc kết thúc
+            gameOverMusic.currentTime = 0;
+            gameOverMusic.play().catch(e => console.log("Trình duyệt chặn nhạc kết thúc"));
         }
     }
     draw() {
@@ -195,6 +204,9 @@ function startGame() {
     resetGameData(); 
     switchState('PLAYING', { inGameBar: 'flex' }); 
     
+    // Tắt nhạc kết thúc nếu nó đang phát (trường hợp nhấn Chơi Lại)
+    gameOverMusic.pause();
+    
     // Phát nhạc khi bắt đầu chơi
     bgMusic.currentTime = 0;
     bgMusic.play().catch(e => console.log("Trình duyệt chặn tự động phát nhạc. Hãy tương tác với game."));
@@ -203,7 +215,9 @@ function startGame() {
 function backToMenu() { 
     resetGameData(); 
     switchState('MENU', { mainMenu: 'flex' }); 
+    
     bgMusic.pause(); // Dừng nhạc khi về Menu
+    gameOverMusic.pause(); // Tắt nhạc kết thúc luôn nếu người dùng thoát ra menu ngay
 }
 
 function togglePause() { 
