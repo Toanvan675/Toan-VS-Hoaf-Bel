@@ -20,17 +20,6 @@
         .menu-btn { background: #8c6339; color: white; border: 3px solid #4a3319; padding: 12px 50px; font-size: 22px; font-weight: bold; cursor: pointer; border-radius: 10px; box-shadow: 0 5px 0 #4a3319; margin: 8px 0; }
         .menu-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #4a3319; }
         .btn-secondary { background: #555 !important; border-color: #333 !important; box-shadow: 0 5px 0 #333 !important; }
-        
-        /* CSS GỐC CHO DESKTOP */
-        .ingame-controls { position: absolute; top: 15px; right: 20px; z-index: 5; display: flex; gap: 10px; }
-        .ctrl-btn { background: #4a3319; color: #fff; border: 2px solid #332211; padding: 8px 15px; font-size: 14px; font-weight: bold; cursor: pointer; border-radius: 5px; white-space: nowrap; }
-        .ctrl-btn:hover { background: #5c8a32; }
-
-        /* SỬA LỖI: TỰ ĐỘNG THU NHỎ NÚT TRÊN MOBILE ĐỂ KHÔNG ĐÈ LÊN THẺ CÂY */
-        @media screen and (max-width: 950px) {
-            .ingame-controls { top: 1.5vw; right: 1.5vw; gap: 0.8vw; }
-            .ctrl-btn { padding: 0.5vw 1vw; font-size: 1.3vw; border-width: 1px; border-radius: 4px; }
-        }
     </style>
 </head>
 <body>
@@ -42,11 +31,6 @@
 </div>
 
 <div class="game-container">
-    <div class="ingame-controls" id="inGameBar" style="display: none;">
-        <button class="ctrl-btn" id="btnSpeed" onclick="toggleSpeed()">Tốc độ: 1x</button>
-        <button class="ctrl-btn" id="btnPause" onclick="togglePause()">Tạm Dừng</button>
-    </div>
-
     <div id="mainMenu" class="overlay">
         <button class="menu-btn" onclick="startGame()">CHƠI</button>
     </div>
@@ -92,7 +76,6 @@ const gameOverMusic = new Audio('audio/gameover.mp3');
 gameOverMusic.loop = false;
 gameOverMusic.volume = 0.6;
 
-// Kích hoạt nhạc chào mừng Menu ngay khi người dùng chạm màn hình lần đầu
 function khichayWeb() {
     if (gameState === 'MENU') {
         menuMusic.play().catch(e => console.log("Trình duyệt chặn phát nhạc tự động"));
@@ -175,9 +158,7 @@ class Zombie {
         if (this.x < 0) {
             gameState = 'GAMEOVER';
             document.getElementById('gameOverOverlay').style.display = 'flex';
-            document.getElementById('inGameBar').style.display = 'none';
             
-            // Dừng toàn bộ nhạc khác, bật nhạc kết thúc độc quyền
             bgMusic.pause();
             menuMusic.pause();
             pauseMusic.pause();
@@ -222,21 +203,19 @@ class Sun {
 function resetGameData() {
     sun = 250; score = 0; plants = []; zombies = []; projectiles = []; suns = []; 
     frameCount = 0; selectedPlant = null; gameSpeed = 1;
-    document.getElementById('btnSpeed').innerText = `Tốc độ: 1x`;
 }
 
 function switchState(state, overlays) {
     gameState = state;
-    ['mainMenu', 'gameOverOverlay', 'pauseOverlay', 'inGameBar'].forEach(id => {
+    ['mainMenu', 'gameOverOverlay', 'pauseOverlay'].forEach(id => {
         document.getElementById(id).style.display = overlays[id] || 'none';
     });
 }
 
 function startGame() { 
     resetGameData(); 
-    switchState('PLAYING', { inGameBar: 'flex' }); 
+    switchState('PLAYING', {}); 
     
-    // Tắt các nhạc khác khi vào trận đấu
     menuMusic.pause();
     pauseMusic.pause();
     gameOverMusic.pause();
@@ -259,7 +238,7 @@ function backToMenu() {
 
 function togglePause() { 
     let newState = gameState === 'PLAYING' ? 'PAUSED' : 'PLAYING';
-    switchState(newState, { inGameBar: 'flex', pauseOverlay: newState === 'PAUSED' ? 'flex' : 'none' }); 
+    switchState(newState, { pauseOverlay: newState === 'PAUSED' ? 'flex' : 'none' }); 
     
     if (newState === 'PAUSED') {
         bgMusic.pause();
@@ -271,10 +250,8 @@ function togglePause() {
     }
 }
 
-// SỬA LỖI: Rút ngắn chuỗi text hiển thị của nút Tốc độ để không bị tràn bề ngang trên mobile
 function toggleSpeed() {
     gameSpeed = gameSpeed === 1 ? 2 : (gameSpeed === 2 ? 0.5 : 1);
-    document.getElementById('btnSpeed').innerText = `Tốc độ: ${gameSpeed}x`;
 }
 
 function isZombieInRow(row) { return zombies.some(z => z.row === row && z.x > 0 && z.alive); }
@@ -284,6 +261,18 @@ canvas.addEventListener('click', (e) => {
     const rect = canvas.getBoundingClientRect();
     const mx = (e.clientX - rect.left) * (canvas.width / rect.width);
     const my = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+    // XỬ LÝ CLICK VÀO 2 NÚT TRÊN CANVAS (Ngăn chọn thẻ cây đè lên bên dưới)
+    if (my < uiH) {
+        if (mx >= 710 && mx <= 790 && my >= 10 && my <= 90) {
+            toggleSpeed();
+            return;
+        }
+        if (mx >= 800 && mx <= 880 && my >= 10 && my <= 90) {
+            togglePause();
+            return;
+        }
+    }
 
     suns.forEach((s) => { if (s.alive && Math.hypot(s.x - mx, s.y - my) < 35) { sun += 25; s.alive = false; } });
 
@@ -377,6 +366,34 @@ function renderGame() {
         ctx.fillStyle = 'white'; ctx.font = "30px Arial"; ctx.fillText("⛏️", shovelX + 40, 45); 
     }
     ctx.fillStyle = 'white'; ctx.font = "bold 16px Arial"; ctx.fillText("XÓA", shovelX + 40, 80);
+
+    // ==========================================
+    // VẼ 2 NÚT ĐIỀU KHIỂN TRỰC TIẾP LÊN CANVAS (Bên phải ô Xóa)
+    // ==========================================
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#332211';
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // Nút Tốc độ (Tọa độ x: 710, y: 10, rộng: 80, cao: 80)
+    ctx.fillStyle = '#8c6339';
+    ctx.fillRect(710, 10, 80, 80);
+    ctx.strokeRect(710, 10, 80, 80);
+    ctx.fillStyle = 'white';
+    ctx.font = "bold 13px Arial";
+    ctx.fillText("TỐC ĐỘ", 750, 35);
+    ctx.font = "bold 18px Arial";
+    ctx.fillText(`${gameSpeed}x`, 750, 62);
+
+    // Nút Tạm dừng (Tọa độ x: 800, y: 10, rộng: 80, cao: 80)
+    ctx.fillStyle = '#8c6339';
+    ctx.fillRect(800, 10, 80, 80);
+    ctx.strokeRect(800, 10, 80, 80);
+    ctx.fillStyle = 'white';
+    ctx.font = "bold 13px Arial";
+    ctx.fillText("TẠM", 840, 35);
+    ctx.fillText("DỪNG", 840, 62);
+    // ==========================================
 
     ctx.strokeStyle = 'rgba(255,255,255,0.12)';
     for(let i=0; i<rows; i++) for(let j=0; j<cols; j++) ctx.strokeRect(j*gridW, i*gridH + uiH, gridW, gridH);
