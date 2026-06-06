@@ -51,6 +51,7 @@
 
     <div id="gameOverOverlay" class="overlay" style="display: none; background: url('images/gameover-bg.jpg') no-repeat center center; background-size: cover; z-index: 12;">
         <h2 style="font-size: 42px; color: #ff3333; margin-bottom: 10px; text-shadow: 2px 2px #000;">Hòa chó đã cho bạn 0 điểm văn</h2>
+        <p style="color: #FF0000; font-size: 18px; margin-bottom: 30px;">Đừng lo, Toàn đẹp trai luôn cho bạn cơ hội làm lại!</p>
         <div style="display: flex; gap: 15px;">
             <button class="menu-btn" style="font-size: 18px; padding: 10px 35px;" onclick="startGame()">CHƠI LẠI</button>
             <button class="menu-btn btn-secondary" style="font-size: 18px; padding: 10px 35px;" onclick="backToMenu()">MENU CHÍNH</button>
@@ -64,15 +65,36 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// --- THÊM NHẠC NỀN ---
-const bgMusic = new Audio('audio/bgm.mp3');
-bgMusic.loop = true; // Lặp lại nhạc khi hết
-bgMusic.volume = 0.5; // Điều chỉnh âm lượng (0.0 đến 1.0)
+// ==========================================
+// --- HỆ THỐNG QUẢN LÝ CẢ 4 LOẠI NHẠC TÁCH BIỆT ---
+// ==========================================
+const menuMusic = new Audio('audio/menu.mp3');
+menuMusic.loop = true;
+menuMusic.volume = 0.5;
 
-// --- THÊM NHẠC KẾT THÚC GAME ---
+const bgMusic = new Audio('audio/bgm.mp3');
+bgMusic.loop = true;
+bgMusic.volume = 0.5;
+
+const pauseMusic = new Audio('audio/pause.mp3');
+pauseMusic.loop = true;
+pauseMusic.volume = 0.4;
+
 const gameOverMusic = new Audio('audio/gameover.mp3');
-gameOverMusic.loop = false; // Chỉ phát 1 lần khi thua
-gameOverMusic.volume = 0.6; // Điều chỉnh âm lượng nhạc kết thúc
+gameOverMusic.loop = false;
+gameOverMusic.volume = 0.6;
+
+// Phát nhạc Chào mừng ngay khi người dùng chạm vào màn hình lần đầu tiên
+function khichayWeb() {
+    if (gameState === 'MENU') {
+        menuMusic.play().catch(e => console.log("Trình duyệt chặn phát nhạc tự động"));
+    }
+    window.removeEventListener('click', khichayWeb);
+    window.removeEventListener('touchstart', khichayWeb);
+}
+window.addEventListener('click', khichayWeb);
+window.addEventListener('touchstart', khichayWeb);
+// ==========================================
 
 let gameState = 'MENU', gameSpeed = 1, globalFrame = 0, sun = 250, score = 0;
 const gridW = 100, gridH = 100, rows = 5, cols = 9, uiH = 100;
@@ -146,9 +168,12 @@ class Zombie {
             gameState = 'GAMEOVER';
             document.getElementById('gameOverOverlay').style.display = 'flex';
             document.getElementById('inGameBar').style.display = 'none';
-            bgMusic.pause(); // Dừng nhạc khi thua game
             
-            // Phát nhạc kết thúc
+            // Tắt toàn bộ các nhạc khác, chỉ bật nhạc GameOver độc quyền
+            bgMusic.pause();
+            menuMusic.pause();
+            pauseMusic.pause();
+            
             gameOverMusic.currentTime = 0;
             gameOverMusic.play().catch(e => console.log("Trình duyệt chặn nhạc kết thúc"));
         }
@@ -203,31 +228,43 @@ function startGame() {
     resetGameData(); 
     switchState('PLAYING', { inGameBar: 'flex' }); 
     
-    // Tắt nhạc kết thúc nếu nó đang phát (trường hợp nhấn Chơi Lại)
+    // Tắt các nhạc khác khi vào trận đấu
+    menuMusic.pause();
+    pauseMusic.pause();
     gameOverMusic.pause();
     
-    // Phát nhạc khi bắt đầu chơi
+    // Phát nhạc chiến đấu chính từ đầu
     bgMusic.currentTime = 0;
-    bgMusic.play().catch(e => console.log("Trình duyệt chặn tự động phát nhạc. Hãy tương tác với game."));
+    bgMusic.play().catch(e => console.log("Trình duyệt chặn nhạc nền."));
 }
 
 function backToMenu() { 
     resetGameData(); 
     switchState('MENU', { mainMenu: 'flex' }); 
     
-    bgMusic.pause(); // Dừng nhạc khi về Menu
-    gameOverMusic.pause(); // Tắt nhạc kết thúc luôn nếu người dùng thoát ra menu ngay
+    // Tắt nhạc trận đấu, nhạc tạm dừng, nhạc kết thúc
+    bgMusic.pause(); 
+    pauseMusic.pause();
+    gameOverMusic.pause(); 
+    
+    // Phát lại nhạc chào mừng Menu từ đầu
+    menuMusic.currentTime = 0;
+    menuMusic.play().catch(e => console.log("Không thể phát nhạc menu"));
 }
 
 function togglePause() { 
     let newState = gameState === 'PLAYING' ? 'PAUSED' : 'PLAYING';
     switchState(newState, { inGameBar: 'flex', pauseOverlay: newState === 'PAUSED' ? 'flex' : 'none' }); 
     
-    // Tạm dừng/Tiếp tục nhạc
     if (newState === 'PAUSED') {
+        // Nếu tạm dừng: Tắt nhạc chiến đấu, bật nhạc Tạm Dừng độc quyền
         bgMusic.pause();
+        pauseMusic.currentTime = 0;
+        pauseMusic.play().catch(e => console.log("Không thể phát nhạc tạm dừng"));
     } else {
-        bgMusic.play();
+        // Nếu tiếp tục chơi: Tắt nhạc tạm dừng, bật lại nhạc chiến đấu tiếp tục
+        pauseMusic.pause();
+        bgMusic.play().catch(e => console.log("Không thể phát lại nhạc nền"));
     }
 }
 
