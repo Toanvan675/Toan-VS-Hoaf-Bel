@@ -1,5 +1,5 @@
-*Simple Pvz WEB with my face on it*
+*Simple PVZ WEB with my face on it*
 
-*picture swapable*
+*Picture swapable*
 
 https://toanvan675.github.io/toan-vs-cho-hoa/
