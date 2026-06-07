@@ -1,5 +1,5 @@
 *Simple PVZ WEB with my face on it*
 
-*Picture swapoable*
+*Picture swappable*
 
 **game** : https://toanvan675.github.io/Toan-VS-Hoaf-Bel/
