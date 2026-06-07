@@ -21,10 +21,19 @@
         .menu-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 #4a3319; }
         .btn-secondary { background: #555 !important; border-color: #333 !important; box-shadow: 0 5px 0 #333 !important; }
         
-        /* Hiệu ứng cảnh báo khi đại dịch đến */
-        .wave-warning { position: absolute; top: 40%; left: 0; width: 100%; text-align: center; color: #ff0000; font-size: 50px; font-weight: bold; text-shadow: 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000; z-index: 5; pointer-events: none; opacity: 0; transition: opacity 0.5s ease; }
-        .wave-warning.active { animation: flashWarning 3s forwards; }
-        @keyframes flashWarning { 0% { opacity: 0; transform: scale(0.5); } 20% { opacity: 1; transform: scale(1.2); } 40% { opacity: 0.5; transform: scale(1); } 60% { opacity: 1; transform: scale(1.1); } 80% { opacity: 1; } 100% { opacity: 0; } }
+        /* Hiệu ứng Cờ chạy ngang giống PvZ gốc */
+        .pvz-wave-warning { position: absolute; top: 35%; left: 0; width: 100%; text-align: center; z-index: 20; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transform: scale(0.5); }
+        .pvz-wave-warning.active { animation: pvzWaveAnim 4s ease-in-out forwards; }
+        @keyframes pvzWaveAnim {
+            0% { opacity: 0; transform: translateX(50vw) scale(0.5); }
+            15% { opacity: 1; transform: translateX(0) scale(1.1); }
+            25% { transform: scale(1); }
+            75% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: translateX(-50vw) scale(0.5); }
+        }
+        .pvz-wave-text { color: #ff0000; font-size: 42px; font-weight: bold; text-shadow: 3px 3px 0 #000, -3px -3px 0 #000, 3px -3px 0 #000, -3px 3px 0 #000; font-family: 'Impact', 'Arial Black', sans-serif; text-transform: uppercase; }
+        .pvz-flag { font-size: 90px; animation: waveFlag 0.3s infinite alternate; margin-bottom: -15px; }
+        @keyframes waveFlag { from { transform: rotate(15deg); } to { transform: rotate(-15deg); } }
     </style>
 </head>
 <body>
@@ -54,7 +63,11 @@
         </div>
     </div>
     
-    <div id="waveWarningText" class="wave-warning">CẢNH BÁO: ĐẠI HỒNG THỦY!!!</div>
+    <!-- Giao diện cờ cảnh báo Wave giống PvZ -->
+    <div id="pvzWaveAlert" class="pvz-wave-warning">
+        <div class="pvz-flag">🚩</div>
+        <div class="pvz-wave-text">A huge wave of zombies<br>is approaching!</div>
+    </div>
 
     <canvas id="gameCanvas" width="900" height="600"></canvas>
 </div>
@@ -84,7 +97,7 @@ window.addEventListener('touchstart', khichayWeb);
 let gameState = 'MENU', gameSpeed = 1, globalFrame = 0, sun = 250, score = 0;
 const gridW = 100, gridH = 100, rows = 5, cols = 9, uiH = 100;
 let plants = [], zombies = [], projectiles = [], suns = [], frameCount = 0, selectedPlant = null;
-let massiveWaveTriggered = false; // Biến đánh dấu xem đại dịch đã xảy ra chưa
+let massiveWaveTriggered = false; 
 
 const plantConfig = {
     sunflower: { cost: 50, hp: 60, icon: '🌻', imgKey: 'sunflower', cooldown: 300, lastPlantedFrame: -300 },
@@ -197,7 +210,7 @@ class Sun {
 function resetGameData() {
     sun = 175; score = 0; plants = []; zombies = []; projectiles = []; suns = []; 
     frameCount = 0; selectedPlant = null; gameSpeed = 1; massiveWaveTriggered = false;
-    document.getElementById('waveWarningText').classList.remove('active');
+    document.getElementById('pvzWaveAlert').classList.remove('active');
     plantCards.forEach(type => { plantConfig[type].lastPlantedFrame = -plantConfig[type].cooldown; });
 }
 
@@ -275,28 +288,26 @@ function updateGameLogic() {
     frameCount++;
     if (frameCount % 400 === 0) suns.push(new Sun(Math.random() * 800 + 50, 0, true));
 
-    // LÔGIC XUẤT HIỆN ZOMBIE SAU KHI ĐẠT 1000 ĐIỂM
-    if (score >= 1000) {
-        // Kích hoạt Đại Hồng Thủy 1 lần duy nhất
+    // CƠ CHẾ ĐẠI HỒNG THỦY - 100 CON
+    if (score >= 500) {
         if (!massiveWaveTriggered) {
             massiveWaveTriggered = true;
-            document.getElementById('waveWarningText').classList.add('active'); // Bật hiệu ứng chữ
-            
-            for (let r = 0; r < rows; r++) {
-                for (let i = 0; i < 15; i++) { // Xuất hiện 15 con mỗi hàng (Tổng 75 con liên tục)
-                    let z = new Zombie(r);
-                    z.x = canvas.width + Math.random() * 200 + i * 60; // Trải dài theo chiều ngang
-                    zombies.push(z);
-                }
+            document.getElementById('pvzWaveAlert').classList.add('active'); // Bật cờ chạy ngang
+
+            // Thả 100 con cùng lúc, xê dịch tọa độ x một chút để chúng tràn ra thành một bầy lớn
+            for (let i = 0; i < 100; i++) {
+                let z = new Zombie(Math.floor(Math.random() * rows));
+                z.x = canvas.width + Math.random() * 1200; // Giãn từ map ra xa 1 đoạn
+                zombies.push(z);
             }
         }
         
-        // Sau khi đạt 1000 điểm, tốc độ ra zombie bình thường tăng mạnh (60 frame/con thay vì 240)
-        if (frameCount % 60 === 0) {
+        // Cứ 45 frame (~0.75 giây) đẻ ra 1 con
+        if (frameCount % 45 === 0) {
             zombies.push(new Zombie(Math.floor(Math.random() * rows)));
         }
     } 
-    // LÔGIC XUẤT HIỆN ZOMBIE TRƯỚC 1000 ĐIỂM (Bình thường)
+    // GIAI ĐOẠN BÌNH THƯỜNG
     else {
         if (frameCount === 60 || (frameCount > 60 && frameCount % 240 === 0)) {
             zombies.push(new Zombie(Math.floor(Math.random() * rows)));
